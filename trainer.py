@@ -7,10 +7,10 @@ from chainer import optimizers
 import chainer.links as L
 import chainer.functions as F
 import numpy as np
-from chainer import serializers
-
+from chainer import serializer
+import matplotlib.pyplot as plt
 import os
-
+import csv
 import dataset_info as di
 
 class trainingdata():
@@ -103,7 +103,7 @@ def calculate_loss(model, seq):
         t = chainer.Variable(np.asarray(seq[:,i:i+1,-1],dtype=np.int32)).reshape(n_seq)
         loss = model(x,t)
     y = model.predictor(x).array
-
+    result = y.argmax(axis=1)
     return loss, F.accuracy(y,t)
 
 # batch単位で誤差をbackward
@@ -136,8 +136,8 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', '-e', type=int, default=200, help='Number of sweeps over the dataset to train')
     parser.add_argument('--out', '-o', default='result', help='Directory to output the result')
     parser.add_argument('--unit', '-u', type=int, default=20, help='Number of units')
-    args = parser.parse_args()
-
+    args = parser.parse_args()        
+    
     if (args.validationfile is None):
         print("Create validation sequences from training file dirs...") 
         datasets = trainingdata(args.trainfile)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
         print('number of validation sequences {}'.format(len(val_seqs)))
         valid_datasets.analyze_sequences()
 
-    print("unit:{} batchsize:{} seq_len:{}".format(args.unit,args.batchsize,args.sequencelength))
+    print("\nunit:{} batchsize:{} seq_len:{}".format(args.unit,args.batchsize,args.sequencelength))
         
     # modelを作成
     model = L.Classifier(MLP(args.unit, 5))
@@ -173,6 +173,13 @@ if __name__ == '__main__':
     n_batches = len(train_seqs) // args.batchsize
     print('number of batches {}'.format(n_batches))
 
+    dirname="unit{}_batche{}_seqlen{}".format(args.unit,args.batchsize,args.sequencelength)
+    os.mkdir(dirname)
+    train_loss = []
+    train_acc = []
+    val_loss = []
+    val_acc = []
+    
     print("epoch \ttraining loss      \ttraining accuracy   \tvalidation loss   \tvalidation accuracy")
     for epoch in range(args.epoch):
         np.random.shuffle(train_seqs)
@@ -189,3 +196,21 @@ if __name__ == '__main__':
 
         validation_loss, validation_acc = evaluate(model,val_seqs)
         print("{}\t{}\t{}\t{}\t{}".format(epoch, loss_sum/n_batches, acc_sum/n_batches, validation_loss.data, validation_acc.data))
+        train_loss.append(loss_sum/n_batches)
+        train_acc.append(acc_sum/n_batches)
+        val_loss.append(validation_loss.data)
+        val_acc.append(validation_acc.data)
+        
+    '''plt.plot(range(args.epoch),train_loss,label='train')
+    plt.plot(range(args.epoch),val_loss,label='test')
+    plt.title('loss')
+    plt.legend()
+    plt.savefig(dirname+'/res.png')
+    plt.close()
+    '''
+    with open('./'+dirname+'/result.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile, lineterminator='\n')
+        writer.writerow(['training loss','training accuracy','validation loss','validation accuracy'])
+        for i in range(len(train_loss)):
+            writer.writerow([train_loss[i],train_acc[i],val_loss[i],val_acc[i]])         
+            
