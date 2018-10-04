@@ -49,7 +49,7 @@ class trainingdata():
             for i in range(n_train_seq):
                 self.trainsequences.append(np.asarray(dataset[i+n_val_seq : i+seq_size+n_val_seq]))
                 
-        return self.trainsequences, self.trainsequences
+        return self.trainsequences, self.validationsequences
 
     
     def analyze_sequences(self):
@@ -133,7 +133,7 @@ if __name__ == '__main__':
                             help='training validation data file path')
     parser.add_argument('--sequencelength', '-l', type=int, default=50, help='Number of sequence length')
     parser.add_argument('--batchsize', '-b', type=int, default=500, help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=100, help='Number of sweeps over the dataset to train')
+    parser.add_argument('--epoch', '-e', type=int, default=200, help='Number of sweeps over the dataset to train')
     parser.add_argument('--out', '-o', default='result', help='Directory to output the result')
     parser.add_argument('--unit', '-u', type=int, default=20, help='Number of units')
     args = parser.parse_args()
@@ -143,18 +143,12 @@ if __name__ == '__main__':
         datasets = trainingdata(args.trainfile)
         train_seqs, val_seqs = datasets.make_slice_sequences(args.sequencelength,0.1)
         datasets.analyze_sequences()
-        '''
-        sequences = datasets.make_sequences(args.sequencelength)
-        datasets.analyze_sequences()
-        np.random.shuffle(sequences)
-        n_train = int(len(sequences) * 0.8)
-        n_val = len(sequences) - n_train
-        train_seqs = sequences[:n_train]
-        val_seqs = sequences[n_train:]
-        '''
-        
+
         print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
         print('number of train sequences {}'.format(len(train_seqs)))
+        print('number of valid sequences {}'.format(len(val_seqs)))
+        
+        
     else:
         train_datasets = trainingdata(args.trainfile)
         valid_datasets = trainingdata(args.validationfile)
