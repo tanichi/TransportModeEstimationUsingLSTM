@@ -7,7 +7,6 @@ import chainer.links as L
 import chainer.functions as F
 import numpy as np
 from chainer import serializer
-import matplotlib.pyplot as plt
 
 import os
 import csv
@@ -16,6 +15,7 @@ import datetime
 from sklearn.metrics import confusion_matrix
 import dataset_info as di
 import datasets as ds
+import export_graph as eg
 import args
 
 # Network definition
@@ -84,7 +84,7 @@ def print_matrix(matrix):
         print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]/sum(row)))
 
 def save_matrix(matrix,path,epoch,acc):
-    with open(path+'/confusion_matrix.csv', 'w') as csvfile:
+    with open(path+'confusion_matrix.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['epoch',epoch,'total accuracy',acc])
         writer.writerow(['#']+di.label_name+['total','accuracy'])
@@ -127,13 +127,13 @@ if __name__ == '__main__':
 
     # 結果出力の準備
     dirname="./result/unit{}_batche{}_seqlen{}_".format(args.unit,args.batchsize,args.sequencelength)
-    dirname+=datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    dirname+=datetime.datetime.now().strftime("%Y%m%d_%H%M")+'/'
     os.mkdir(dirname)
-    with open(dirname+'/result.csv', 'w') as csvfile:
+    with open(dirname+'result.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['training loss','training accuracy','validation loss','validation accuracy'])
 
-    with open(dirname+'/params.txt', 'w') as f:
+    with open(dirname+'params.txt', 'w') as f:
         f.write(str(args))
     train_loss = []
     train_acc = []
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         val_acc.append(validation_acc.data)
         
         print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1], val_loss[-1], val_acc[-1])) 
-        with open(dirname+'/result.csv', 'a') as csvfile:
+        with open(dirname+'result.csv', 'a') as csvfile:
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1]])
 
@@ -171,4 +171,5 @@ if __name__ == '__main__':
         if max(val_acc) is val_acc[-1]:
             #print_matrix(validation_matrix)
             save_matrix(validation_matrix,dirname,epoch,val_acc[-1])
-            chainer.serializers.save_npz(dirname+'/model.npz',model)
+            chainer.serializers.save_npz(dirname+'model.npz',model)
+    eg.export_graph(dirname,args.epoch,train_loss,train_acc,val_loss,val_acc)
