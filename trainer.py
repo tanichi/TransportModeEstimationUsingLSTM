@@ -9,8 +9,12 @@ import chainer.functions as F
 import numpy as np
 from chainer import serializer
 import matplotlib.pyplot as plt
+
 import os
 import csv
+import datetime
+
+from sklearn.metrics import confusion_matrix
 import dataset_info as di
 
 class trainingdata():
@@ -86,7 +90,7 @@ class MLP(chainer.Chain):
     def __call__(self, x):
         with chainer.using_config('train', self.train):
             h1 = self.l1(F.dropout(x))
-#            h1 = self.l1(x)
+            # h1 = self.l1(x)
             y = self.l2(h1)
         return y
 
@@ -102,17 +106,20 @@ def calculate_loss(model, seq):
         x = chainer.Variable(np.asarray(seq[:,i:i+1,:n_feature],dtype=np.float32)).reshape(n_seq,n_feature)
         t = chainer.Variable(np.asarray(seq[:,i:i+1,-1],dtype=np.int32)).reshape(n_seq)
         loss = model(x,t)
+
+    # ネットワークの出力(各クラスの確率)
     y = model.predictor(x).array
+    # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
-    return loss, F.accuracy(y,t)
+    
+    return loss, F.accuracy(y,t), confusion_matrix(t.data,result)
 
 # batch単位で誤差をbackward
 def update_model(model, seq):
-    loss, acc = calculate_loss(model,seq)
+    loss, acc, mat = calculate_loss(model,seq)
 
     model.cleargrads()
     loss.backward()
-
     loss.unchain_backward()
 
     optimizer.update()
@@ -122,7 +129,8 @@ def evaluate(model, seqs):
     clone = model.copy()
     clone.train = False
     clone.predictor.reset_state()
-    loss, acc = calculate_loss(clone, seqs)
+    loss, acc, mat = calculate_loss(clone, seqs)
+    print(mat)
     return loss, acc
    
 if __name__ == '__main__':    
@@ -136,12 +144,13 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', '-e', type=int, default=200, help='Number of sweeps over the dataset to train')
     parser.add_argument('--out', '-o', default='result', help='Directory to output the result')
     parser.add_argument('--unit', '-u', type=int, default=20, help='Number of units')
+    parser.add_argument('--ratio', '-r', type=float, default=0.1, help='validation dataset ratio')
     args = parser.parse_args()        
     
     if (args.validationfile is None):
         print("Create validation sequences from training file dirs...") 
         datasets = trainingdata(args.trainfile)
-        train_seqs, val_seqs = datasets.make_slice_sequences(args.sequencelength,0.1)
+        train_seqs, val_seqs = datasets.make_slice_sequences(args.sequencelength,args.ratio)
         datasets.analyze_sequences()
 
         print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
@@ -173,8 +182,10 @@ if __name__ == '__main__':
     n_batches = len(train_seqs) // args.batchsize
     print('number of batches {}'.format(n_batches))
 
-    dirname="unit{}_batche{}_seqlen{}".format(args.unit,args.batchsize,args.sequencelength)
+    dirname="result/unit{}_batche{}_seqlen{}_".format(args.unit,args.batchsize,args.sequencelength)
+    dirname+=datetime.datetime.now().strftime("%Y%m%d_%H%M")
     os.mkdir(dirname)
+    
     train_loss = []
     train_acc = []
     val_loss = []
