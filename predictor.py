@@ -7,6 +7,7 @@ import chainer.links as L
 import matplotlib.pyplot as plt
 import numpy as np
 import os 
+import collections
 
 from trainer import MLP
 import json
@@ -28,16 +29,19 @@ def main():
     sequences = np.asarray(datasets.make_sequences(params['sequencelength']),dtype=np.float32)[:,:,:3]
     
     with chainer.using_config('train', False):
+        model.predictor.reset_state()
         for i in range(params['sequencelength']):
             seq = sequences[:,i]
             y = model.predictor(seq).array
         result = y.argmax(axis=1)
     print('予想ラベル:{0}'.format(result))
 
+    
     # ラベル補正
-    for i in range(len(result)-4):
-        if result[i] != result[i+1] and (result[i+1] == result[i+2] == result[i+3]):
-            result[i] = result[i+1]
+    num = 30
+    for i in range(len(result)-num+1):
+        c = collections.Counter(result[i:i+num])
+        result[i] = c.most_common()[0][0]
 
     # 波形ファイルを読み込み
     x = np.loadtxt(args.validationfile,delimiter=",", usecols=(range(3)))
