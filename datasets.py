@@ -16,6 +16,7 @@ class trainingdata():
             for file in files:
                 if(file[-4:] == '.csv'):
                     filepath = os.path.join(root, file)
+                    print(filepath)
                     self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
         print('loaded {} csvfiles'.format(len(self.datasets)))
 
@@ -34,10 +35,12 @@ class trainingdata():
             n_seq = len(dataset) - seq_size + 1
             n_val_seq = int(n_seq * ratio) 
             n_train_seq = n_seq - n_val_seq
-            
+            print(n_seq)
+            print(n_val_seq)
+            print(n_train_seq)
             for i in range(n_val_seq):
                 self.validationsequences.append(np.asarray(dataset[i:i+seq_size]))
-                
+            
             for i in range(n_train_seq):
                 self.trainsequences.append(np.asarray(dataset[i+n_val_seq : i+seq_size+n_val_seq]))
                 
