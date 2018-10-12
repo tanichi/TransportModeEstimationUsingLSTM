@@ -11,6 +11,7 @@ from chainer import serializer
 import os
 import csv
 import datetime
+import json
 
 from sklearn.metrics import confusion_matrix
 import dataset_info as di
@@ -133,8 +134,12 @@ if __name__ == '__main__':
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['training loss','training accuracy','validation loss','validation accuracy'])
 
-    with open(dirname+'params.txt', 'w') as f:
-        f.write(str(args))
+    argsdict = {'batchsize':args.batchsize, 'epoch':args.epoch, 'out':args.out, 'ratio':args.ratio,
+                'sequencelength':args.sequencelength, 'trainfile':args.trainfile,
+                'validationfile':args.validationfile, 'unit':args.unit}
+    with open(dirname+"params.json", "w") as f:
+        json.dump(argsdict, f, ensure_ascii=False)
+
     train_loss = []
     train_acc = []
     val_loss = []
