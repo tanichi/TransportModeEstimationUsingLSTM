@@ -12,12 +12,16 @@ class trainingdata():
 
         self.trainsequences = []
         self.validationsequences = []
-        for root, dirs, files in os.walk(directory):
-            for file in files:
-                if(file[-4:] == '.csv'):
-                    filepath = os.path.join(root, file)
-                    print(filepath)
-                    self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
+
+        if os.path.isdir(directory):
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    if(file[-4:] == '.csv'):
+                        filepath = os.path.join(root, file)
+                        print(filepath)
+                        self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
+        else:
+            self.datasets.append(np.loadtxt(directory,delimiter=",", usecols=(range(4))))
         print('loaded {} csvfiles'.format(len(self.datasets)))
 
     def make_sequences(self,seq_size):

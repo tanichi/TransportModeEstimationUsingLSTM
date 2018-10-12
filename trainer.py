@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     argsdict = {'batchsize':args.batchsize, 'epoch':args.epoch, 'out':args.out, 'ratio':args.ratio,
                 'sequencelength':args.sequencelength, 'trainfile':args.trainfile,
-                'validationfile':args.validationfile, 'unit':args.unit}
+                'validationfile':args.validationfile, 'unit':args.unit, 'classies':len(di.label_name)}
     with open(dirname+"params.json", "w") as f:
         json.dump(argsdict, f, ensure_ascii=False)
 
