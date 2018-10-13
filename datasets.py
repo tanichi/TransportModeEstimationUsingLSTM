@@ -39,9 +39,6 @@ class trainingdata():
             n_seq = len(dataset) - seq_size + 1
             n_val_seq = int(n_seq * ratio) 
             n_train_seq = n_seq - n_val_seq
-            print(n_seq)
-            print(n_val_seq)
-            print(n_train_seq)
             for i in range(n_val_seq):
                 self.validationsequences.append(np.asarray(dataset[i:i+seq_size]))
             

@@ -9,6 +9,7 @@ import numpy as np
 import os 
 import collections
 
+from tqdm import tqdm
 from trainer import MLP
 import json
 import datasets as ds
@@ -30,7 +31,7 @@ def main():
     
     with chainer.using_config('train', False):
         model.predictor.reset_state()
-        for i in range(params['sequencelength']):
+        for i in tqdm(range(params['sequencelength'])):
             seq = sequences[:,i]
             y = model.predictor(seq).array
         result = y.argmax(axis=1)
@@ -51,8 +52,15 @@ def main():
 
     # ラベルごとに色付け
     colors = ['m','b','r','y','g','c']
-    for i in range(params['sequencelength'],len(x)+1):
-        plt.axvspan(i-0.5, i+0.5, facecolor=colors[result[i-params['sequencelength']]], alpha=0.5)
+    start = params['sequencelength']
+    
+    for i in tqdm(range(params['sequencelength'],len(x))):
+        c = result[i-params['sequencelength']]
+        if c != result[i-params['sequencelength']+1]:
+            #print('fill {} {} col {}'.format(start,i,c))
+            plt.axvspan(start-0.5, i+0.5, facecolor=colors[c], alpha=0.5)
+            start=i+1
+    plt.axvspan(start-0.5, i+0.5, facecolor=colors[c], alpha=0.5)
     plt.show()
 
 if __name__ == '__main__':

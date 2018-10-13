@@ -47,8 +47,8 @@ def calculate_loss(model, seq):
     n_feature = 3 
     loss = 0
     for i in range(len_seq):
-        x = chainer.Variable(np.asarray(seq[:,i:i+1,:n_feature],dtype=np.float32)).reshape(n_seq,n_feature)
-        t = chainer.Variable(np.asarray(seq[:,i:i+1,-1],dtype=np.int32)).reshape(n_seq)
+        x = chainer.Variable(np.asarray(seq[:,i,:n_feature],dtype=np.float32)).reshape(n_seq,n_feature)
+        t = chainer.Variable(np.asarray(seq[:,i,-1],dtype=np.int32)).reshape(n_seq)
         loss = model(x,t)
 
     # ネットワークの出力(各クラスの確率)
@@ -127,8 +127,9 @@ if __name__ == '__main__':
     print('number of batches {}'.format(n_batches))
 
     # 結果出力の準備
-    dirname="./result/unit{}_batche{}_seqlen{}_".format(args.unit,args.batchsize,args.sequencelength)
-    dirname+=datetime.datetime.now().strftime("%Y%m%d_%H%M")+'/'
+    dirname='./result/'+datetime.datetime.now().strftime("%m-%d_%H-%M")
+    dirname+="_unit{}_batche{}_seqlen{}/".format(args.unit,args.batchsize,args.sequencelength)
+    
     os.mkdir(dirname)
     with open(dirname+'result.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
