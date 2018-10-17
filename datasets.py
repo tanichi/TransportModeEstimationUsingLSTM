@@ -16,7 +16,7 @@ class trainingdata():
         if os.path.isdir(directory):
             for root, dirs, files in os.walk(directory):
                 for file in files:
-                    if(file[-4:] == '.csv'):
+                    if(file[-4:] == '.csv' and not file.startswith(".")):
                         filepath = os.path.join(root, file)
                         print(filepath)
                         self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
