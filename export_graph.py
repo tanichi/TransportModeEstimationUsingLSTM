@@ -30,5 +30,5 @@ def export_graph(path, epoch, train_loss, train_acc, test_loss, test_acc):
     axL.legend(loc = 'upper right')
     axR.legend(loc = 'upper left')
     #ファイルセーブ
-    fig.savefig(path + 'LossAccuracy.png')
+    fig.savefig(path + 'LossAccuracy.pdf')
     plt.close()

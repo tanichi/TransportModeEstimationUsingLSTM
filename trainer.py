@@ -34,8 +34,11 @@ class MLP(chainer.Chain):
     def __call__(self, x):
         with chainer.using_config('train', self.train):
             h1 = self.l1(F.dropout(x))
+            print(h1.shape)
             # h1 = self.l1(x)
             y = self.l2(F.dropout(h1))
+            print(y)
+            print("")
         return y
 
 # batch単位での誤差を求める
@@ -53,6 +56,7 @@ def calculate_loss(model, seq):
 
     # ネットワークの出力(各クラスの確率)
     y = model.predictor(x).array
+    print(y)
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
     
@@ -90,7 +94,8 @@ def save_matrix(matrix,path,epoch,acc):
         writer.writerow(['epoch',epoch,'total accuracy',acc])
         writer.writerow(['#']+di.label_name+['total','accuracy'])
         for i,row in enumerate(matrix):
-            writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
+            if sum(row) is not 0:
+                writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
             
 if __name__ == '__main__':    
     args = args.parser.parse_args()
