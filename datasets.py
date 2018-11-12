@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import dataset_info as di
+import itertools
 
 class trainingdata():
     def __init__(self,directory):
@@ -25,12 +26,32 @@ class trainingdata():
         print('loaded {} csvfiles'.format(len(self.datasets)))
 
     def make_sequences(self,seq_size):
-        self.train_sequences = []
+        self.trainsequences = []
         for dataset in self.datasets:
             n_seq = len(dataset) - seq_size + 1
             for i in range(n_seq):
                 self.trainsequences.append(np.asarray(dataset[i:i+seq_size]))
-        return self.trainsequences
+        return np.asarray(self.trainsequences)
+
+    def make_rotate_sequences(self,seq_size):
+        self.trainsequences = []
+
+        combination = []
+        for com in itertools.permutations(range(3)):
+            com = list(com)
+            com.append(3)
+            combination.append(com)
+
+        for dataset in self.datasets:
+            n_seq = len(dataset) - seq_size + 1
+            for i in range(n_seq):
+                # オリジナルのシーケンスデータの抽出
+                seq = np.asarray(dataset[i:i+seq_size])
+
+                # 組み合わせcom 毎に次元を入れ替えて追加
+                for com in combination:
+                    self.trainsequences.append(seq[:,com])
+        return np.asarray(self.trainsequences)
 
     def make_slice_sequences(self,seq_size,ratio=0.2):
         self.validationsequences = []
@@ -44,9 +65,9 @@ class trainingdata():
             
             for i in range(n_train_seq):
                 self.trainsequences.append(np.asarray(dataset[i+n_val_seq : i+seq_size+n_val_seq]))
-                
-        return self.trainsequences, self.validationsequences
+        return np.asarray(self.trainsequences), np.asarray(self.validationsequences)
     
+    # クラスごとのデータセット数のヒストグラムを作成
     def analyze_sequences(self):
         print("train seqences")
         label = []

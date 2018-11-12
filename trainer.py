@@ -34,11 +34,8 @@ class MLP(chainer.Chain):
     def __call__(self, x):
         with chainer.using_config('train', self.train):
             h1 = self.l1(F.dropout(x))
-            print(h1.shape)
             # h1 = self.l1(x)
             y = self.l2(F.dropout(h1))
-            print(y)
-            print("")
         return y
 
 # batch単位での誤差を求める
@@ -56,7 +53,7 @@ def calculate_loss(model, seq):
 
     # ネットワークの出力(各クラスの確率)
     y = model.predictor(x).array
-    print(y)
+    #print(y)
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
     
@@ -109,7 +106,8 @@ if __name__ == '__main__':
     else:
         train_datasets = ds.trainingdata(args.trainfile)
         valid_datasets = ds.trainingdata(args.validationfile)
-        train_seqs = train_datasets.make_sequences(args.sequencelength)
+        #train_seqs = train_datasets.make_sequences(args.sequencelength)
+        train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
         val_seqs = valid_datasets.make_sequences(args.sequencelength)
                                                  
         train_datasets.analyze_sequences()
@@ -120,7 +118,7 @@ if __name__ == '__main__':
     print('number of validation sequences {}'.format(len(val_seqs)))
     
     print("\nunit:{} batchsize:{} seq_len:{}".format(args.unit,args.batchsize,args.sequencelength))
-        
+
     # modelを作成
     model = L.Classifier(MLP(args.unit, 5))
 

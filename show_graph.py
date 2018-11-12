@@ -12,8 +12,7 @@ def main():
     
     # 波形ファイルを読み込み
     x = np.loadtxt(args.csvfile,delimiter=",", usecols=(range(3)))
-    x = x[1380:1430]
-    
+
     plt.plot(range(len(x)), x[:,0])
     plt.plot(range(len(x)), x[:,1])
     plt.plot(range(len(x)), x[:,2])

@@ -19,5 +19,7 @@ application = tornado.web.Application([
 ])
 
 if __name__ == "__main__":
-    application.listen(8000)
+    port = 8000
+    print(port)
+    application.listen(port)
     tornado.ioloop.IOLoop.instance().start()
