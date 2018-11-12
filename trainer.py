@@ -56,8 +56,15 @@ def calculate_loss(model, seq):
     #print(y)
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
-    
-    return loss, F.accuracy(y,t), confusion_matrix(t.data,result)
+
+    matrix = confusion_matrix(t.data,result)
+
+    if matrix.shape[0] is not 5:
+        num = 5-matrix.shape[0]
+        matrix = np.concatenate((matrix, np.zeros((num,matrix.shape[0]))), axis=0)
+        matrix = np.concatenate((matrix,np.zeros((5,num))), axis=1)
+        
+    return loss, F.accuracy(y,t), matrix
 
 # batch単位で誤差をbackward
 def update_model(model, seq):
@@ -73,8 +80,25 @@ def update_model(model, seq):
 def evaluate(model, seqs):
     clone = model.copy()
     clone.train = False
-    clone.predictor.reset_state()
-    loss, acc, mat = calculate_loss(clone, seqs)
+    
+    n_seq, len_seq, len_row = seqs.shape
+
+    loss = 0
+    acc = 0
+    mat = np.zeros((5,5))
+    
+    for i in range(n_seq // 1000 + 1):
+        if i is n_seq // 1000+1:
+            subsequence = seqs[i*1000:]
+        else:
+            subsequence = seqs[i*1000:(i+1)*1000]
+        
+        clone.predictor.reset_state()
+        subloss, subacc, submat = calculate_loss(clone, subsequence)
+
+        loss += subloss * len(subsequence)/n_seq
+        acc += subacc * len(subsequence)/n_seq
+        mat = mat + submat
     return loss, acc, mat
 
 def print_matrix(matrix):
