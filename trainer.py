@@ -101,17 +101,17 @@ if __name__ == '__main__':
         print("Create validation sequences from training file dirs...") 
         datasets = ds.trainingdata(args.trainfile)
         train_seqs, val_seqs = datasets.make_slice_sequences(args.sequencelength,args.ratio)
-        datasets.analyze_sequences()
+        datasets.analyze_sequences(train_seqs,val_seqs)
 
     else:
         train_datasets = ds.trainingdata(args.trainfile)
         valid_datasets = ds.trainingdata(args.validationfile)
-        #train_seqs = train_datasets.make_sequences(args.sequencelength)
-        train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
+        train_seqs = train_datasets.make_sequences(args.sequencelength)
+        #train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
         val_seqs = valid_datasets.make_sequences(args.sequencelength)
                                                  
-        train_datasets.analyze_sequences()
-        valid_datasets.analyze_sequences()
+        train_datasets.analyze_sequences(train_seqs,val_seqs)
+        #valid_datasets.analyze_sequences(val_seqs)
 
     print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
     print('number of train sequences {}'.format(len(train_seqs)))
