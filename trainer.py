@@ -58,13 +58,7 @@ def calculate_loss(model, seq):
     #print(y)
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
-
-    matrix = confusion_matrix(t.data,result)
-
-    if matrix.shape[0] is not 5:
-        num = 5-matrix.shape[0]
-        matrix = np.concatenate((matrix, np.zeros((num,matrix.shape[0]))), axis=0)
-        matrix = np.concatenate((matrix,np.zeros((5,num))), axis=1)        
+    matrix = confusion_matrix(t.data,result,labels=[0,1,2,3,4])
     return loss, F.accuracy(y,t), matrix
 
 # batch単位で誤差をbackward
@@ -87,7 +81,6 @@ def evaluate(model, seqs):
     loss = 0
     acc = 0
     mat = np.zeros((5,5))
-
     for i in range(n_seq // 1000 + 1):
         if i is n_seq // 1000+1:
             subsequence = seqs[i*1000:]
@@ -96,19 +89,24 @@ def evaluate(model, seqs):
         
         clone.predictor.reset_state()
         subloss, subacc, submat = calculate_loss(clone, subsequence)
-
         loss += subloss.data * len(subsequence)/n_seq
         acc += subacc.data * len(subsequence)/n_seq
         mat = mat + submat
+        
     return loss, acc, mat
 
 def print_matrix(matrix):
     print('--------------------------------------------------------')
     for i,row in enumerate(matrix):
         print('{:>6}|'.format(di.label2name(i)), end='')
-        for item in row:
-            print('{:>7.2%}'.format(item/sum(row)), end='')
-        print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]/sum(row)))
+        if int(sum(row)) is not 0:
+            for item in row:
+                print('{:>7.2%}'.format(item/sum(row)), end='')
+            print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]/sum(row)))
+        else:
+            for item in row:
+                print('{:>7.2%}'.format(item), end='')
+            print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]))
 
 def save_matrix(matrix,path,epoch,acc):
     with open(path+'confusion_matrix.csv', 'w') as csvfile:
@@ -116,9 +114,10 @@ def save_matrix(matrix,path,epoch,acc):
         writer.writerow(['epoch',epoch,'total accuracy',acc])
         writer.writerow(['#']+di.label_name+['total','accuracy'])
         for i,row in enumerate(matrix):
-            if sum(row) is not 0:
+            if int(sum(row)) is not 0:
                 writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
-
+            else:
+                writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
 if __name__ == '__main__':
     args = args.parser.parse_args()
     
