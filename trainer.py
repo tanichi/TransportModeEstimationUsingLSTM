@@ -20,7 +20,6 @@ import export_graph as eg
 import args
 import gc
 
-
 from memory_profiler import profile
 
 # Network definition
@@ -65,8 +64,7 @@ def calculate_loss(model, seq):
     if matrix.shape[0] is not 5:
         num = 5-matrix.shape[0]
         matrix = np.concatenate((matrix, np.zeros((num,matrix.shape[0]))), axis=0)
-        matrix = np.concatenate((matrix,np.zeros((5,num))), axis=1)
-        
+        matrix = np.concatenate((matrix,np.zeros((5,num))), axis=1)        
     return loss, F.accuracy(y,t), matrix
 
 # batch単位で誤差をbackward
@@ -121,16 +119,6 @@ def save_matrix(matrix,path,epoch,acc):
             if sum(row) is not 0:
                 writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
 
-def print_varsize():
-    import types
-    print("{}{: >15}{}{: >10}{}".format('|','Variable Name','|','  Size','|'))
-    print(" -------------------------- ")
-    for k, v in globals().items():
-        if hasattr(v, 'size') and not k.startswith('_') and not isinstance(v,types.ModuleType):
-            print("{}{: >15}{}{: >10}{}".format('|',k,'|',str(v.size),'|'))
-        elif hasattr(v, '__len__') and not k.startswith('_') and not isinstance(v,types.ModuleType):
-            print("{}{: >15}{}{: >10}{}".format('|',k,'|',str(len(v)),'|'))
-
 if __name__ == '__main__':
     args = args.parser.parse_args()
     
@@ -150,7 +138,6 @@ if __name__ == '__main__':
         val_seqs = valid_datasets.make_sequences(args.sequencelength)
 
         train_datasets.analyze_sequences(train_seqs,val_seqs)
-        #valid_datasets.analyze_sequences(val_seqs)
         
     print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
     print('number of train sequences {}'.format(len(train_seqs)))
@@ -170,8 +157,10 @@ if __name__ == '__main__':
 
     # 結果出力の準備
     dirname='./result/'+datetime.datetime.now().strftime("%m-%d_%H-%M")
-    dirname+="_unit{}_batche{}_seqlen{}/".format(args.unit,args.batchsize,args.sequencelength)
-    
+    if args.rotate is 0:
+        dirname+="_unit{}_batche{}_seqlen{}/".format(args.unit,args.batchsize,args.sequencelength)
+    else:
+        dirname+="_unit{}_batche{}_seqlen{}_rotate/".format(args.unit,args.batchsize,args.sequencelength)
     os.mkdir(dirname)
     with open(dirname+'result.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
