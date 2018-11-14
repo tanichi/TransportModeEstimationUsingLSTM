@@ -18,6 +18,10 @@ import dataset_info as di
 import datasets as ds
 import export_graph as eg
 import args
+import gc
+
+
+from memory_profiler import profile
 
 # Network definition
 class MLP(chainer.Chain):
@@ -50,7 +54,6 @@ def calculate_loss(model, seq):
         x = chainer.Variable(np.asarray(seq[:,i,:n_feature],dtype=np.float32)).reshape(n_seq,n_feature)
         t = chainer.Variable(np.asarray(seq[:,i,-1],dtype=np.int32)).reshape(n_seq)
         loss = model(x,t)
-
     # ネットワークの出力(各クラスの確率)
     y = model.predictor(x).array
     #print(y)
@@ -75,7 +78,7 @@ def update_model(model, seq):
     loss.unchain_backward()
 
     optimizer.update()
-    return loss, acc
+    return loss.data, acc.data
 
 def evaluate(model, seqs):
     clone = model.copy()
@@ -86,7 +89,7 @@ def evaluate(model, seqs):
     loss = 0
     acc = 0
     mat = np.zeros((5,5))
-    
+
     for i in range(n_seq // 1000 + 1):
         if i is n_seq // 1000+1:
             subsequence = seqs[i*1000:]
@@ -96,8 +99,8 @@ def evaluate(model, seqs):
         clone.predictor.reset_state()
         subloss, subacc, submat = calculate_loss(clone, subsequence)
 
-        loss += subloss * len(subsequence)/n_seq
-        acc += subacc * len(subsequence)/n_seq
+        loss += subloss.data * len(subsequence)/n_seq
+        acc += subacc.data * len(subsequence)/n_seq
         mat = mat + submat
     return loss, acc, mat
 
@@ -117,8 +120,18 @@ def save_matrix(matrix,path,epoch,acc):
         for i,row in enumerate(matrix):
             if sum(row) is not 0:
                 writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
-            
-if __name__ == '__main__':    
+
+def print_varsize():
+    import types
+    print("{}{: >15}{}{: >10}{}".format('|','Variable Name','|','  Size','|'))
+    print(" -------------------------- ")
+    for k, v in globals().items():
+        if hasattr(v, 'size') and not k.startswith('_') and not isinstance(v,types.ModuleType):
+            print("{}{: >15}{}{: >10}{}".format('|',k,'|',str(v.size),'|'))
+        elif hasattr(v, '__len__') and not k.startswith('_') and not isinstance(v,types.ModuleType):
+            print("{}{: >15}{}{: >10}{}".format('|',k,'|',str(len(v)),'|'))
+
+if __name__ == '__main__':
     args = args.parser.parse_args()
     
     if (args.validationfile is None):
@@ -126,7 +139,7 @@ if __name__ == '__main__':
         datasets = ds.trainingdata(args.trainfile)
         train_seqs, val_seqs = datasets.make_slice_sequences(args.sequencelength,args.ratio)
         datasets.analyze_sequences(train_seqs,val_seqs)
-
+        
     else:
         train_datasets = ds.trainingdata(args.trainfile)
         valid_datasets = ds.trainingdata(args.validationfile)
@@ -136,7 +149,7 @@ if __name__ == '__main__':
                                                  
         train_datasets.analyze_sequences(train_seqs,val_seqs)
         #valid_datasets.analyze_sequences(val_seqs)
-
+        
     print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
     print('number of train sequences {}'.format(len(train_seqs)))
     print('number of validation sequences {}'.format(len(val_seqs)))
@@ -183,19 +196,21 @@ if __name__ == '__main__':
         for i in range(n_batches):
             seq = train_seqs[start: start + args.batchsize]
             start += args.batchsize
-
+            
             loss, acc = update_model(model, seq)
-            loss_sum += loss.data
-            acc_sum += acc.data
+            
+            loss_sum += loss
+            acc_sum += acc
 
         validation_loss, validation_acc, validation_matrix = evaluate(model,val_seqs)
         
         train_loss.append(loss_sum/n_batches)
         train_acc.append(acc_sum/n_batches)
-        val_loss.append(validation_loss.data)
-        val_acc.append(validation_acc.data)
+        val_loss.append(validation_loss)
+        val_acc.append(validation_acc)
         
-        print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1], val_loss[-1], val_acc[-1])) 
+        print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1],
+                                                          val_loss[-1], val_acc[-1])) 
         with open(dirname+'result.csv', 'a') as csvfile:
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1]])
@@ -206,3 +221,4 @@ if __name__ == '__main__':
             save_matrix(validation_matrix,dirname,epoch,val_acc[-1])
             chainer.serializers.save_npz(dirname+'model.npz',model)
     eg.export_graph(dirname,args.epoch,train_loss,train_acc,val_loss,val_acc)
+
