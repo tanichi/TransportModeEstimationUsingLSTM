@@ -143,10 +143,12 @@ if __name__ == '__main__':
     else:
         train_datasets = ds.trainingdata(args.trainfile)
         valid_datasets = ds.trainingdata(args.validationfile)
-        train_seqs = train_datasets.make_sequences(args.sequencelength)
-        #train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
+        if args.rotate is 0:
+            train_seqs = train_datasets.make_sequences(args.sequencelength)
+        else:
+            train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
         val_seqs = valid_datasets.make_sequences(args.sequencelength)
-                                                 
+
         train_datasets.analyze_sequences(train_seqs,val_seqs)
         #valid_datasets.analyze_sequences(val_seqs)
         
