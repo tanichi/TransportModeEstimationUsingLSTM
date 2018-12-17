@@ -17,7 +17,10 @@ def main():
     plt.plot(range(len(x)), x[:,1])
     plt.plot(range(len(x)), x[:,2])
 
-    plt.show()
+    #plt.show()
+    plt.ylim(-10, 10)
+    plt.text(0, 45, args.csvfile)
+    plt.savefig(args.csvfile+'.pdf')
 
 if __name__ == '__main__':
     main()

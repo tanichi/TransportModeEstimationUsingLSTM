@@ -5,12 +5,12 @@ import os
 import numpy as np
 import dataset_info as di
 import itertools
+np.set_printoptions(linewidth=200)
 
 class trainingdata():
     def __init__(self,directory):
         # [np.array(CSVFILE1), np.array(CSVFILE2)]
         self.datasets = []
-
         if os.path.isdir(directory):
             for root, dirs, files in os.walk(directory):
                 for file in files:
@@ -22,6 +22,51 @@ class trainingdata():
             self.datasets.append(np.loadtxt(directory,delimiter=",", usecols=(range(4))))
         print('loaded {} csvfiles'.format(len(self.datasets)))
 
+    def make_index(self, seq_size, batch_size):
+        self.indexes = []
+        self.sequence_size = seq_size
+        
+        for i, dataset in enumerate(self.datasets):
+            rows = dataset.shape[0]+1
+            filenum = np.full((rows-self.sequence_size,1),i)
+            fileindex = np.arange(rows-self.sequence_size).reshape(rows-self.sequence_size,1)
+            index = np.concatenate([filenum,fileindex],axis=1)
+            if len(self.indexes) == 0:
+                self.indexes = index
+            else:
+                self.indexes = np.concatenate([self.indexes,index],axis=0)
+
+        # batchひとつあたりのシーケンス数
+        self.batch_size = batch_size
+        # 何個までbatch確保できるか
+        self.batches_size = len(self.indexes) // self.batch_size
+        self.batch_index = 0 # バッチ呼び出すときのindex
+        
+    # batchを取り出すためのindexをshuffle
+    def shuffle_index(self):
+        self.batch_index = 0 # バッチ呼び出すときのindex
+        np.random.shuffle(self.indexes)
+    
+    def batch(self):
+        batch = np.empty((self.batch_size, self.sequence_size, 4))
+        
+        for i,index in enumerate(self.indexes[self.batch_index * self.batch_size: (self.batch_index + 1) * self.batch_size]):
+            filenum = index[0]
+            fileindex = index[1]
+            batch[i] = self.datasets[filenum][fileindex : fileindex+self.sequence_size]
+        self.batch_index += 1
+        return batch
+
+    def validation_batch(self):
+        validationbatchsize = len(self.datasets[self.batch_index]) - self.sequence_size + 1
+        batch = np.empty((validationbatchsize ,self.sequence_size, 4))
+
+        for i in range(validationbatchsize):
+            batch[i] = self.datasets[self.batch_index][i:i+self.sequence_size]
+
+        self.batch_index += 1
+        return batch
+        
     def make_sequences(self,seq_size):
         trainsequences = []
         for dataset in self.datasets:
@@ -66,7 +111,7 @@ class trainingdata():
     
     # クラスごとのデータセット数のヒストグラムを作成
     def analyze_sequences(self,trainsequences,validationsequences):
-        print("train seqences")
+        print("train sequences")
         label = []
         for sequence in trainsequences:
             label.append(sequence[-1][-1])
@@ -77,7 +122,7 @@ class trainingdata():
                 
         if len(validationsequences)!=0:
             label = []
-            print("validation seqences")
+            print("validation sequences")
             for sequence in validationsequences:
                 label.append(sequence[-1][-1])
             label = np.asarray(label)

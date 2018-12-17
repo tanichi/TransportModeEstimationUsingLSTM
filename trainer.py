@@ -20,6 +20,8 @@ import export_graph as eg
 import args
 import gc
 
+import sys
+
 from memory_profiler import profile
 
 # Network definition
@@ -75,25 +77,10 @@ def update_model(model, seq):
 def evaluate(model, seqs):
     clone = model.copy()
     clone.train = False
-    
-    n_seq, len_seq, len_row = seqs.shape
+    clone.predictor.reset_state()
+    loss, acc, mat = calculate_loss(clone, seqs)
 
-    loss = 0
-    acc = 0
-    mat = np.zeros((5,5))
-    for i in range(n_seq // 1000 + 1):
-        if i is n_seq // 1000+1:
-            subsequence = seqs[i*1000:]
-        else:
-            subsequence = seqs[i*1000:(i+1)*1000]
-        
-        clone.predictor.reset_state()
-        subloss, subacc, submat = calculate_loss(clone, subsequence)
-        loss += subloss.data * len(subsequence)/n_seq
-        acc += subacc.data * len(subsequence)/n_seq
-        mat = mat + submat
-        
-    return loss, acc, mat
+    return loss.data, acc.data, mat
 
 def print_matrix(matrix):
     print('--------------------------------------------------------')
@@ -130,18 +117,12 @@ if __name__ == '__main__':
     else:
         train_datasets = ds.trainingdata(args.trainfile)
         valid_datasets = ds.trainingdata(args.validationfile)
-        if args.rotate is 0:
-            train_seqs = train_datasets.make_sequences(args.sequencelength)
-        else:
-            train_seqs = train_datasets.make_rotate_sequences(args.sequencelength)
-        val_seqs = valid_datasets.make_sequences(args.sequencelength)
 
-        train_datasets.analyze_sequences(train_seqs,val_seqs)
+        train_datasets.make_index(args.sequencelength, args.batchsize)
+        valid_datasets.make_index(args.sequencelength, args.batchsize)
         
-    print('number of sequences {}'.format(len(train_seqs)+len(val_seqs)))
-    print('number of train sequences {}'.format(len(train_seqs)))
-    print('number of validation sequences {}'.format(len(val_seqs)))
-    
+        val_seqs = valid_datasets.make_sequences(args.sequencelength)
+        
     print("\nunit:{} batchsize:{} seq_len:{}".format(args.unit,args.batchsize,args.sequencelength))
 
     # modelを作成
@@ -151,7 +132,7 @@ if __name__ == '__main__':
     optimizer.setup(model)
 
     # train
-    n_batches = len(train_seqs) // args.batchsize
+    n_batches = train_datasets.batches_size
     print('number of batches {}'.format(n_batches))
 
     # 結果出力の準備
@@ -179,25 +160,32 @@ if __name__ == '__main__':
     print("epoch \tt-loss\tt-acc\tv-loss\tv-acc")
 
     for epoch in range(args.epoch):
-        np.random.shuffle(train_seqs)
-        start = 0
+        train_datasets.shuffle_index()
         loss_sum = 0
         acc_sum = 0
         for i in range(n_batches):
-            seq = train_seqs[start: start + args.batchsize]
-            start += args.batchsize
-            
-            loss, acc = update_model(model, seq)
+            loss, acc = update_model(model, train_datasets.batch())
             
             loss_sum += loss
             acc_sum += acc
 
-        validation_loss, validation_acc, validation_matrix = evaluate(model,val_seqs)
+        valid_datasets.batch_index = 0
+
+        validation_loss_sum = []
+        validation_acc_sum = []
+        validation_weight = []
+        for i in range(len(valid_datasets.datasets)):
+            #validation_loss, validation_acc, validation_matrix = evaluate(model,val_seqs)
+            batch = valid_datasets.validation_batch()
+            validation_loss, validation_acc, validation_matrix = evaluate(model,batch)
+            validation_loss_sum.append(validation_loss)
+            validation_acc_sum.append(validation_acc)
+            validation_weight.append(len(batch))
         
         train_loss.append(loss_sum/n_batches)
         train_acc.append(acc_sum/n_batches)
-        val_loss.append(validation_loss)
-        val_acc.append(validation_acc)
+        val_loss.append((np.array(validation_loss_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
+        val_acc.append((np.array(validation_acc_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
         
         print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1],
                                                           val_loss[-1], val_acc[-1])) 
