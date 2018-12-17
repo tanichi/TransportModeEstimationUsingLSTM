@@ -95,7 +95,7 @@ def print_matrix(matrix):
                 print('{:>7.2%}'.format(item), end='')
             print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]))
 
-def save_matrix(matrix,path,epoch,acc):
+def save_matrix(matrix,path,epoch,acc,raw=None):
     with open(path+'confusion_matrix.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['epoch',epoch,'total accuracy',acc])
@@ -105,6 +105,17 @@ def save_matrix(matrix,path,epoch,acc):
                 writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
             else:
                 writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
+    if raw is not None:
+        with open(path+'confusion_matrix_raw.csv', 'w') as csvfile:
+            writer = csv.writer(csvfile, lineterminator='\n')
+            writer.writerow(['epoch',epoch,'total accuracy',acc])
+            writer.writerow(['#']+di.label_name+['total','accuracy'])
+            
+            for i,row in enumerate(matrix):
+                if int(sum(row)) is not 0:
+                    writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),row[i]/sum(row)])
+                else:
+                    writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
 if __name__ == '__main__':
     args = args.parser.parse_args()
     
@@ -196,7 +207,7 @@ if __name__ == '__main__':
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1]])
 
-        save_matrix(validation_matrix, dirname+'matrixes/epoch-'+str(epoch)+'_', epoch, val_acc[-1])
+        save_matrix(validation_matrix, dirname+'matrixes/epoch-'+str(epoch)+'_', epoch, val_acc[-1],1)
         # 最高精度を更新
         if max(val_acc) is val_acc[-1]:
             #print_matrix(validation_matrix)
