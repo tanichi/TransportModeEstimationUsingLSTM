@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-def export_graph(path, epoch, train_loss, train_acc, test_loss, test_acc):
+def export_graph(path, epoch, train_loss, train_acc, test_loss, test_acc, corrected_acc):
     fig, (axL, axR) = plt.subplots(ncols=2, figsize=(10,4))
     axL.set_title('model Loss')
     axL.set_xlabel('epochs')
@@ -14,6 +14,7 @@ def export_graph(path, epoch, train_loss, train_acc, test_loss, test_acc):
     axL.plot(test_loss , label='test' , linestyle='solid', lw=0.8)
     axR.plot(train_acc , label='train', linestyle='solid', lw=0.8)
     axR.plot(test_acc  , label='test' , linestyle='solid', lw=0.8)
+    axR.plot(corrected_acc  , label='test(corrected)' , linestyle='solid', lw=0.8)
     #グリッドの設定
     axL.xaxis.grid(linestyle='-', lw=0.5, alpha=0.4, color='lightgray')
     axL.yaxis.grid(linestyle='-', lw=0.5, alpha=0.4, color='lightgray')

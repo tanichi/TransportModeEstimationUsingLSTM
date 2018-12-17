@@ -19,6 +19,8 @@ import datasets as ds
 import export_graph as eg
 import args
 import gc
+import copy
+import collections
 
 import sys
 
@@ -44,7 +46,7 @@ class MLP(chainer.Chain):
         return y
 
 # batch単位での誤差を求める
-def calculate_loss(model, seq):
+def calculate_loss(model, seq, window=None):
     # seq = [[[x,y,z,t], ... ,[x,y,z,t]], [[x,y,z,t], ... ,[x,y,z,t]]]
     seq = np.asarray(seq)
     n_seq, len_seq, len_row = seq.shape
@@ -61,6 +63,12 @@ def calculate_loss(model, seq):
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
     matrix = confusion_matrix(t.data,result,labels=[0,1,2,3,4])
+
+    if window is not None:
+        corrected_result = corrector(result, window)
+        corrected_matrix = confusion_matrix(t.data,corrected_result,labels=[0,1,2,3,4])
+        corrected_accuracy = (len(np.array(t.data)) - np.count_nonzero(np.array(t.data)-np.array(corrected_result))) / len(np.array(t.data))
+        return loss, F.accuracy(y,t), matrix, corrected_accuracy, corrected_matrix
     return loss, F.accuracy(y,t), matrix
 
 # batch単位で誤差をbackward
@@ -78,9 +86,16 @@ def evaluate(model, seqs):
     clone = model.copy()
     clone.train = False
     clone.predictor.reset_state()
-    loss, acc, mat = calculate_loss(clone, seqs)
+    loss, acc, mat, cor_acc, cor_mat = calculate_loss(clone, seqs, 20)
 
-    return loss.data, acc.data, mat
+    return loss.data, acc.data, mat, cor_acc, cor_mat
+
+def corrector(result,window):
+    num = window
+    for i in range(len(result)-num+1):
+        c = collections.Counter(result[i:i+num])
+        result[i] = c.most_common()[0][0]
+    return result
 
 def print_matrix(matrix):
     print('--------------------------------------------------------')
@@ -95,8 +110,8 @@ def print_matrix(matrix):
                 print('{:>7.2%}'.format(item), end='')
             print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]))
 
-def save_matrix(matrix,path,epoch,acc,raw=None):
-    with open(path+'confusion_matrix.csv', 'w') as csvfile:
+def save_matrix(matrix,path,filename,epoch,acc,raw=None):
+    with open(path+filename, 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['epoch',epoch,'total accuracy',acc])
         writer.writerow(['#']+di.label_name+['total','accuracy'])
@@ -106,7 +121,7 @@ def save_matrix(matrix,path,epoch,acc,raw=None):
             else:
                 writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
     if raw is not None:
-        with open(path+'confusion_matrix_raw.csv', 'w') as csvfile:
+        with open(path+'raw/'+filename, 'w') as csvfile:
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow(['epoch',epoch,'total accuracy',acc])
             writer.writerow(['#']+di.label_name+['total','accuracy'])
@@ -154,9 +169,13 @@ if __name__ == '__main__':
         dirname+="_unit{}_batche{}_seqlen{}_rotate/".format(args.unit,args.batchsize,args.sequencelength)
     os.mkdir(dirname)
     os.mkdir(dirname+'matrixes/')
+    os.mkdir(dirname+'matrixes/raw/')
+    os.mkdir(dirname+'corrected_matrixes/')
+    os.mkdir(dirname+'corrected_matrixes/raw/')
+    
     with open(dirname+'result.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
-        writer.writerow(['training loss','training accuracy','validation loss','validation accuracy'])
+        writer.writerow(['training loss','training accuracy','validation loss','validation accuracy','corrected accuracy'])
 
     argsdict = {'batchsize':args.batchsize, 'epoch':args.epoch, 'out':args.out, 'ratio':args.ratio,
                 'sequencelength':args.sequencelength, 'trainfile':args.trainfile,
@@ -168,6 +187,7 @@ if __name__ == '__main__':
     train_acc = []
     val_loss = []
     val_acc = []
+    cor_accuracy = []
     
     print("epoch \tt-loss\tt-acc\tv-loss\tv-acc")
 
@@ -188,30 +208,38 @@ if __name__ == '__main__':
         validation_weight = []
         validation_matrix = np.zeros((5,5))
         
+        cor_validation_acc_sum = []
+        cor_validation_matrix = np.zeros((5,5))
+        
         for i in range(len(valid_datasets.datasets)):
             batch = valid_datasets.validation_batch()
-            validation_loss, validation_acc, matrix = evaluate(model,batch)
+            validation_loss, validation_acc, matrix, cor_acc, cor_mat = evaluate(model,batch)
             validation_loss_sum.append(validation_loss)
             validation_acc_sum.append(validation_acc)
             validation_weight.append(len(batch))
             validation_matrix = validation_matrix + matrix
+
+            cor_validation_acc_sum.append(cor_acc)
+            cor_validation_matrix = cor_validation_matrix + cor_mat
             
         train_loss.append(loss_sum/n_batches)
         train_acc.append(acc_sum/n_batches)
         val_loss.append((np.array(validation_loss_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
         val_acc.append((np.array(validation_acc_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
-        
-        print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1],
-                                                          val_loss[-1], val_acc[-1])) 
+        cor_accuracy.append((np.array(cor_validation_acc_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
+        print("{}\t{:.3f}\t{:.2%}\t{:.3f}\t{:.2%}\t{:.2%}".format(epoch, train_loss[-1], train_acc[-1],
+                                                                  val_loss[-1], val_acc[-1], cor_accuracy[-1])) 
         with open(dirname+'result.csv', 'a') as csvfile:
             writer = csv.writer(csvfile, lineterminator='\n')
-            writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1]])
+            writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1],cor_accuracy[-1]])
 
-        save_matrix(validation_matrix, dirname+'matrixes/epoch-'+str(epoch)+'_', epoch, val_acc[-1],1)
+        save_matrix(validation_matrix, dirname+'matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, val_acc[-1],1)
+        save_matrix(cor_validation_matrix, dirname+'corrected_matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, cor_accuracy[-1],1)
+        
         # 最高精度を更新
         if max(val_acc) is val_acc[-1]:
             #print_matrix(validation_matrix)
-            save_matrix(validation_matrix,dirname,epoch,val_acc[-1])
+            save_matrix(validation_matrix,dirname,'confusion_matrix.csv',epoch,val_acc[-1])
             chainer.serializers.save_npz(dirname+'model.npz',model)
-    eg.export_graph(dirname,args.epoch,train_loss,train_acc,val_loss,val_acc)
+    eg.export_graph(dirname,args.epoch,train_loss,train_acc,val_loss,val_acc,cor_accuracy)
 
