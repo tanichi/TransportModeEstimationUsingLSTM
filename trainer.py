@@ -142,6 +142,7 @@ if __name__ == '__main__':
     else:
         dirname+="_unit{}_batche{}_seqlen{}_rotate/".format(args.unit,args.batchsize,args.sequencelength)
     os.mkdir(dirname)
+    os.mkdir(dirname+'matrixes/')
     with open(dirname+'result.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['training loss','training accuracy','validation loss','validation accuracy'])
@@ -174,14 +175,16 @@ if __name__ == '__main__':
         validation_loss_sum = []
         validation_acc_sum = []
         validation_weight = []
+        validation_matrix = np.zeros((5,5))
+        
         for i in range(len(valid_datasets.datasets)):
-            #validation_loss, validation_acc, validation_matrix = evaluate(model,val_seqs)
             batch = valid_datasets.validation_batch()
-            validation_loss, validation_acc, validation_matrix = evaluate(model,batch)
+            validation_loss, validation_acc, matrix = evaluate(model,batch)
             validation_loss_sum.append(validation_loss)
             validation_acc_sum.append(validation_acc)
             validation_weight.append(len(batch))
-        
+            validation_matrix = validation_matrix + matrix
+            
         train_loss.append(loss_sum/n_batches)
         train_acc.append(acc_sum/n_batches)
         val_loss.append((np.array(validation_loss_sum) * np.array(validation_weight)).sum() / np.array(validation_weight).sum())
@@ -193,6 +196,7 @@ if __name__ == '__main__':
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1]])
 
+        save_matrix(validation_matrix, dirname+'matrixes/epoch-'+str(epoch)+'_', epoch, val_acc[-1])
         # 最高精度を更新
         if max(val_acc) is val_acc[-1]:
             #print_matrix(validation_matrix)
