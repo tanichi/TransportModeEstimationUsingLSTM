@@ -108,7 +108,7 @@ if __name__ == '__main__':
         datasets.analyze_sequences(train_seqs,val_seqs)
         
     else:
-        train_datasets = ds.trainingdata(args.trainfile)
+        train_datasets = ds.trainingdata(args.trainfile, args.rotate)
         valid_datasets = ds.trainingdata(args.validationfile)
 
         train_datasets.make_index(args.sequencelength, args.batchsize)

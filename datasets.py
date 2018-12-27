@@ -8,16 +8,28 @@ import itertools
 np.set_printoptions(linewidth=200)
 
 class trainingdata():
-    def __init__(self,directory):
+    def __init__(self,directory, rotate=None):
         # [np.array(CSVFILE1), np.array(CSVFILE2)]
         self.datasets = []
+
+        if rotate is not None:
+            combination = []
+            for com in itertools.permutations(range(3)):
+                com = list(com)
+                com.append(3)
+                combination.append(com)
+        
         if os.path.isdir(directory):
             for root, dirs, files in os.walk(directory):
                 for file in files:
                     if(file[-4:] == '.csv' and not file.startswith(".")):
                         filepath = os.path.join(root, file)
                         print(filepath)
-                        self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
+                        if rotate is not None: 
+                            for com in combination:
+                                self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4)))[:,com])
+                        else:
+                            self.datasets.append(np.loadtxt(filepath,delimiter=",", usecols=(range(4))))
         else:
             self.datasets.append(np.loadtxt(directory,delimiter=",", usecols=(range(4))))
         print('loaded {} csvfiles'.format(len(self.datasets)))

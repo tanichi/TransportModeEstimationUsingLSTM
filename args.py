@@ -14,4 +14,4 @@ parser.add_argument('--epoch', '-e', type=int, default=200, help='Number of swee
 parser.add_argument('--out', '-o', default=None, help='Directory to output the result')
 parser.add_argument('--unit', '-u', type=int, default=20, help='Number of units')
 parser.add_argument('--ratio', '-r', type=float, default=0.1, help='validation dataset ratio')
-parser.add_argument('--rotate', '-rt', type=int, default=0, help='training dataset rotate')
+parser.add_argument('--rotate', '-rt', type=int, default=None, help='training dataset rotate')
