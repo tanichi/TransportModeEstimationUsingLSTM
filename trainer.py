@@ -62,11 +62,11 @@ def calculate_loss(model, seq, window=None):
     #print(y)
     # 確率が第第となる推定クラス
     result = y.argmax(axis=1)
-    matrix = confusion_matrix(t.data,result,labels=[0,1,2,3,4])
+    matrix = confusion_matrix(t.data,result,labels=di.labels())
 
     if window is not None:
         corrected_result = corrector(result, window)
-        corrected_matrix = confusion_matrix(t.data,corrected_result,labels=[0,1,2,3,4])
+        corrected_matrix = confusion_matrix(t.data,corrected_result,labels=di.labels())
         corrected_accuracy = (len(np.array(t.data)) - np.count_nonzero(np.array(t.data)-np.array(corrected_result))) / len(np.array(t.data))
         return loss, F.accuracy(y,t), matrix, corrected_accuracy, corrected_matrix
     return loss, F.accuracy(y,t), matrix
@@ -114,7 +114,7 @@ def save_matrix(matrix,path,filename,epoch,acc,raw=None):
     with open(path+filename, 'w') as csvfile:
         writer = csv.writer(csvfile, lineterminator='\n')
         writer.writerow(['epoch',epoch,'total accuracy',acc])
-        writer.writerow(['#']+di.label_name+['total','accuracy'])
+        writer.writerow(['#']+di.names()+['total','accuracy'])
         for i,row in enumerate(matrix):
             if int(sum(row)) is not 0:
                 writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
@@ -124,7 +124,7 @@ def save_matrix(matrix,path,filename,epoch,acc,raw=None):
         with open(path+'raw/'+filename, 'w') as csvfile:
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow(['epoch',epoch,'total accuracy',acc])
-            writer.writerow(['#']+di.label_name+['total','accuracy'])
+            writer.writerow(['#']+di.names()+['total','accuracy'])
             
             for i,row in enumerate(matrix):
                 if int(sum(row)) is not 0:
@@ -182,7 +182,7 @@ if __name__ == '__main__':
 
     argsdict = {'batchsize':args.batchsize, 'epoch':args.epoch, 'out':args.out, 'ratio':args.ratio,
                 'sequencelength':args.sequencelength, 'trainfile':args.trainfile,
-                'validationfile':args.validationfile, 'unit':args.unit, 'classies':len(di.label_name)}
+                'validationfile':args.validationfile, 'unit':args.unit, 'classies':di.n_class()}
     with open(dirname+"params.json", "w") as f:
         json.dump(argsdict, f, ensure_ascii=False)
 
