@@ -17,6 +17,7 @@ from sklearn.metrics import confusion_matrix
 import dataset_info as di
 import datasets as ds
 import export_graph as eg
+import export_matrix as em
 import args
 import gc
 import copy
@@ -97,40 +98,6 @@ def corrector(result,window):
         result[i] = c.most_common()[0][0]
     return result
 
-def print_matrix(matrix):
-    print('--------------------------------------------------------')
-    for i,row in enumerate(matrix):
-        print('{:>6}|'.format(di.label2name(i)), end='')
-        if int(sum(row)) is not 0:
-            for item in row:
-                print('{:>7.2%}'.format(item/sum(row)), end='')
-            print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]/sum(row)))
-        else:
-            for item in row:
-                print('{:>7.2%}'.format(item), end='')
-            print('|{:>6}|{:.2%}'.format(sum(row),matrix[i][i]))
-
-def save_matrix(matrix,path,filename,epoch,acc,raw=None):
-    with open(path+filename, 'w') as csvfile:
-        writer = csv.writer(csvfile, lineterminator='\n')
-        writer.writerow(['epoch',epoch,'total accuracy',acc])
-        writer.writerow(['#']+di.names()+['total','accuracy'])
-        for i,row in enumerate(matrix):
-            if int(sum(row)) is not 0:
-                writer.writerow([di.label2name(i)]+(row/sum(row)).tolist()+[sum(row),row[i]/sum(row)])
-            else:
-                writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
-    if raw is not None:
-        with open(path+'raw/'+filename, 'w') as csvfile:
-            writer = csv.writer(csvfile, lineterminator='\n')
-            writer.writerow(['epoch',epoch,'total accuracy',acc])
-            writer.writerow(['#']+di.names()+['total','accuracy'])
-            
-            for i,row in enumerate(matrix):
-                if int(sum(row)) is not 0:
-                    writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),row[i]/sum(row)])
-                else:
-                    writer.writerow([di.label2name(i)]+row.tolist()+[sum(row),0])
 if __name__ == '__main__':
     args = args.parser.parse_args()
     
@@ -236,13 +203,13 @@ if __name__ == '__main__':
             writer = csv.writer(csvfile, lineterminator='\n')
             writer.writerow([train_loss[-1],train_acc[-1],val_loss[-1],val_acc[-1],cor_accuracy[-1]])
 
-        save_matrix(validation_matrix, dirname+'matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, val_acc[-1],1)
-        save_matrix(cor_validation_matrix, dirname+'corrected_matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, cor_accuracy[-1],1)
+        em.save_matrix(validation_matrix, dirname+'matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, val_acc[-1],1)
+        em.save_matrix(cor_validation_matrix, dirname+'corrected_matrixes/',str(epoch)+'_confusion_matrix.csv', epoch, cor_accuracy[-1],1)
         
         # 最高精度を更新
         if max(val_acc) is val_acc[-1]:
             #print_matrix(validation_matrix)
-            save_matrix(validation_matrix,dirname,'confusion_matrix.csv',epoch,val_acc[-1])
+            em.save_matrix(validation_matrix,dirname,'confusion_matrix.csv',epoch,val_acc[-1])
             chainer.serializers.save_npz(dirname+'model.npz',model)
     eg.export_graph(dirname,args.epoch,train_loss,train_acc,val_loss,val_acc,cor_accuracy)
 
