@@ -86,7 +86,7 @@ def evaluate(model, seqs):
     clone = model.copy()
     clone.train = False
     clone.predictor.reset_state()
-    loss, acc, mat, cor_acc, cor_mat = calculate_loss(clone, seqs, 20)
+    loss, acc, mat, cor_acc, cor_mat = calculate_loss(clone, seqs, 300)
 
     return loss.data, acc.data, mat, cor_acc, cor_mat
 
@@ -162,12 +162,15 @@ if __name__ == '__main__':
     print('number of batches {}'.format(n_batches))
 
     # 結果出力の準備
-    dirname='./result/'+datetime.datetime.now().strftime("%m-%d_%H-%M")
-    if args.rotate is 0:
-        dirname+="_unit{}_batche{}_seqlen{}/".format(args.unit,args.batchsize,args.sequencelength)
+    if args.out is None:
+        dirname='./result/'+datetime.datetime.now().strftime("%m-%d_%H-%M")
+        if args.rotate is 0:
+            dirname+="_unit{}_batche{}_seqlen{}/".format(args.unit,args.batchsize,args.sequencelength)
+        else:
+            dirname+="_unit{}_batche{}_seqlen{}_rotate/".format(args.unit,args.batchsize,args.sequencelength)
+        os.mkdir(dirname)
     else:
-        dirname+="_unit{}_batche{}_seqlen{}_rotate/".format(args.unit,args.batchsize,args.sequencelength)
-    os.mkdir(dirname)
+        dirname = './'+args.out
     os.mkdir(dirname+'matrixes/')
     os.mkdir(dirname+'matrixes/raw/')
     os.mkdir(dirname+'corrected_matrixes/')
